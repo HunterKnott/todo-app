@@ -6,7 +6,7 @@ A simple Django-based todo list application.
 
 1. **Clone the repository**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/HunterKnott/todo-app.git
    cd todo-app
    ```
 
