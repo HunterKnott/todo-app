@@ -1,0 +1,147 @@
+/* Buttons */
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin: 2px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-height: 44px;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+/* Basic navigation styles */
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.nav h2 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Basic body styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 10px;
+    background-color: #f5f5f5;
+    line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+    .nav {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px 0;
+    }
+    .nav-buttons {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+    .nav-buttons form,
+    .nav-buttons button {
+        width: 100%;
+        margin: 0;
+    }
+    .container,
+    .modal-content,
+    .modal {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        min-width: 0 !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .modal-content {
+        padding: 20px !important;
+    }
+    .btn,
+    button,
+    input[type="submit"] {
+        width: 100%;
+        min-height: 48px;
+        font-size: 1.1rem;
+    }
+    /* Stack task items vertically */
+    .task-item,
+    .task-list > div,
+    .task-list > form {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 12px 8px !important;
+    }
+    .task-item > div,
+    .task-list > div > div {
+        text-align: left !important;
+        margin-bottom: 8px !important;
+    }
+    .modal {
+        padding: 0 !important;
+    }
+    /* Make modals take up the whole screen */
+    #createModal, #editModal {
+        padding: 0 !important;
+        align-items: flex-start !important;
+    }
+    /* Make task category headers stack */
+    [style*="display: grid; grid-template-columns: auto 1fr 1fr 1fr;"] {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        padding: 12px 8px !important;
+    }
+    /* Make plus and triangle buttons bigger for touch */
+    button[title^="Create"], span[id$="-icon"] {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 1.3rem !important;
+    }
+    /* Increase font size for task titles */
+    .task-item strong,
+    .task-list strong {
+        font-size: 1.1rem !important;
+    }
+}

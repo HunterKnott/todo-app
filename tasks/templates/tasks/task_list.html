@@ -1,0 +1,671 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="nav" style="margin-left: 12px;">
+    <h2>
+        Your Tasks
+        <span style="font-size: 1rem; font-weight: 400; color: #666;">
+            ({{ user.email }})
+        </span>
+    </h2>
+    <div class="nav-links" style="display: flex; gap: 18px; align-items: center;">
+        {% if user.is_staff %}
+            <a href="{% url 'admin:index' %}" style="font-weight: bold; color: #222; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#007bff'" onmouseout="this.style.color='#222'">
+                Admin
+            </a>
+        {% endif %}
+        <a href="{% url 'logout' %}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="font-weight: bold; color: #222; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#007bff'" onmouseout="this.style.color='#222'">
+            Logout
+        </a>
+        <form id="logout-form" method="post" action="{% url 'logout' %}" style="display: none;">
+            {% csrf_token %}
+        </form>
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div id="createModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; padding: 20px;">
+    <div id="createModalContent" style="background-color: #fefefe; margin: 20px auto; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative;">
+        <span onclick="closeModal('create')" style="position: absolute; top: 15px; right: 20px; color: #aaa; font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f0f0f0'; this.style.color='#000'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#aaa'">&times;</span>
+        <h3 style="margin: 0 0 5px 0; padding-right: 50px; font-size: 1.5rem;">Create New Task</h3>
+        <p id="priority-subtitle" style="margin: 0 0 20px 0; color: #666; font-size: 0.9rem;">Medium Priority</p>
+        <form method="post" action="{% url 'task_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="priority" id="create_priority" value="M">
+            <div style="margin-bottom: 20px;">
+                <label for="id_title" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Title:</label>
+                <input type="text" name="title" id="id_title" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" required onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="id_description" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Description:</label>
+                <textarea name="description" id="id_description" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'"></textarea>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="id_due_date" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Due Date:</label>
+                <input type="datetime-local" name="due_date" id="id_due_date" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" required onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+            </div>
+            <button type="submit" class="btn btn-primary">Create Task</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div id="editModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; padding: 20px;">
+    <div id="editModalContent" style="background-color: #fefefe; margin: 20px auto; padding: 25px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative;">
+        <span onclick="closeModal('edit')" style="position: absolute; top: 15px; right: 20px; color: #aaa; font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s ease;" onmouseover="this.style.backgroundColor='#f0f0f0'; this.style.color='#000'" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#aaa'">&times;</span>
+        <h3 style="margin: 0 0 20px 0; padding-right: 50px; font-size: 1.5rem;">Edit Task</h3>
+        <form id="editForm" method="post">
+            {% csrf_token %}
+            <div style="margin-bottom: 20px;">
+                <label for="edit_title" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Title:</label>
+                <input type="text" name="title" id="edit_title" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" required onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="edit_description" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Description:</label>
+                <textarea name="description" id="edit_description" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'"></textarea>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="edit_due_date" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Due Date:</label>
+                <input type="datetime-local" name="due_date" id="edit_due_date" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" required onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="edit_priority" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">Priority:</label>
+                <select name="priority" id="edit_priority" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 16px; transition: border-color 0.2s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0, 123, 255, 0.1)'" onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
+                    <option value="L">Low</option>
+                    <option value="M">Medium</option>
+                    <option value="H">High</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Task</button>
+        </form>
+    </div>
+</div>
+
+<!-- Task Categories -->
+<div class="task-list" style="margin: 40px;">
+    <!-- High Priority -->
+    <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            align-items: center;
+            font-weight: 600;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            transition: background-color 0.2s ease;
+          "
+        >
+            <button onclick="openCreateModal('H')" 
+                    style="background: none; border: none; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease; margin-right: 15px;" 
+                    onmouseover="this.style.backgroundColor='#e9ecef'" 
+                    onmouseout="this.style.backgroundColor='transparent'"
+                    title="Create High Priority Task">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+            <span style="text-align: center;">High Priority</span>
+            <span style="text-align: center;">({{ tasks_by_priority.high.count }})</span>
+            <span id="high-icon" style="font-size: 0.8rem; color: #666; text-align: center; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease;" 
+                  onclick="toggleCategory('high')" 
+                  onmouseover="this.style.backgroundColor='#e9ecef'" 
+                  onmouseout="this.style.backgroundColor='transparent'">▼</span>
+        </div>
+        <div id="high-content" style="padding: 0;">
+            {% for task in tasks_by_priority.high %}
+                <div class="task-item" style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; align-items: center; background: white; position: relative; cursor: pointer;" 
+                     onmouseover="this.style.backgroundColor='#f8f9fa'; showTooltip(this, '{{ task.description|escapejs }}')" 
+                     onmouseout="this.style.backgroundColor='white'; hideTooltip()"
+                     onclick="toggleButtons(this, '{{ task.pk }}')">
+                    <div style="text-align: center;">
+                        <strong style="display: block; margin-bottom: 5px; color: #333;">{{ task.title }}</strong>
+                        <span style="font-size: 0.9rem; color: #666;">
+                            Due: {{ task.due_date|date:"M j, Y g:i A" }}
+                            {% if task.is_overdue %}
+                                <span style="color: #dc3545; margin-left: 8px; cursor: pointer;" 
+                                      title="Overdue"
+                                      onmouseover="showTooltip(this, 'Overdue')" 
+                                      onmouseout="hideTooltip()">
+                                    &#9888;
+                                </span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div id="buttons-{{ task.pk }}" style="display: none; margin-top: 10px;">
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                            <button onclick="openEditModal(this); event.stopPropagation();" 
+                                    style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                    onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                    onmouseout="this.style.backgroundColor='transparent'"
+                                    data-task-id="{{ task.pk }}"
+                                    data-title="{{ task.title|escapejs }}"
+                                    data-description="{{ task.description|escapejs }}"
+                                    data-due-date="{{ task.due_date|date:'Y-m-d\TH:i' }}"
+                                    data-priority="{{ task.priority }}"
+                                    title="Edit">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </button>
+                            <form action="{% url 'task_complete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Complete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="20,6 9,17 4,12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            <form action="{% url 'task_delete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Delete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="3,6 5,6 21,6"/>
+                                        <path d="m19,6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div style="padding: 20px; text-align: center; color: #666; font-style: italic;">No high priority tasks</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Medium Priority -->
+    <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            align-items: center;
+            font-weight: 600;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            transition: background-color 0.2s ease;
+          "
+        >
+            <button onclick="openCreateModal('M')" 
+                    style="background: none; border: none; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease; margin-right: 15px;" 
+                    onmouseover="this.style.backgroundColor='#e9ecef'" 
+                    onmouseout="this.style.backgroundColor='transparent'"
+                    title="Create Medium Priority Task">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+            <span style="text-align: center;">Medium Priority</span>
+            <span style="text-align: center;">({{ tasks_by_priority.medium.count }})</span>
+            <span id="medium-icon" style="font-size: 0.8rem; color: #666; text-align: center; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease;" 
+                  onclick="toggleCategory('medium')" 
+                  onmouseover="this.style.backgroundColor='#e9ecef'" 
+                  onmouseout="this.style.backgroundColor='transparent'">▼</span>
+        </div>
+        <div id="medium-content" style="padding: 0;">
+            {% for task in tasks_by_priority.medium %}
+                <div class="task-item" style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; align-items: center; background: white; position: relative; cursor: pointer;" 
+                     onmouseover="this.style.backgroundColor='#f8f9fa'; showTooltip(this, '{{ task.description|escapejs }}')" 
+                     onmouseout="this.style.backgroundColor='white'; hideTooltip()"
+                     onclick="toggleButtons(this, '{{ task.pk }}')">
+                    <div style="text-align: center;">
+                        <strong style="display: block; margin-bottom: 5px; color: #333;">{{ task.title }}</strong>
+                        <span style="font-size: 0.9rem; color: #666;">
+                            Due: {{ task.due_date|date:"M j, Y g:i A" }}
+                            {% if task.is_overdue %}
+                                <span style="color: #dc3545; margin-left: 8px; cursor: pointer;" 
+                                      title="Overdue"
+                                      onmouseover="showTooltip(this, 'Overdue')" 
+                                      onmouseout="hideTooltip()">
+                                    &#9888;
+                                </span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div id="buttons-{{ task.pk }}" style="display: none; margin-top: 10px;">
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                            <button onclick="openEditModal(this); event.stopPropagation();" 
+                                    style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                    onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                    onmouseout="this.style.backgroundColor='transparent'"
+                                    data-task-id="{{ task.pk }}"
+                                    data-title="{{ task.title|escapejs }}"
+                                    data-description="{{ task.description|escapejs }}"
+                                    data-due-date="{{ task.due_date|date:'Y-m-d\TH:i' }}"
+                                    data-priority="{{ task.priority }}"
+                                    title="Edit">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </button>
+                            <form action="{% url 'task_complete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Complete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="20,6 9,17 4,12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            <form action="{% url 'task_delete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Delete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="3,6 5,6 21,6"/>
+                                        <path d="m19,6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div style="padding: 20px; text-align: center; color: #666; font-style: italic;">No medium priority tasks</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Low Priority -->
+    <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            align-items: center;
+            font-weight: 600;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            transition: background-color 0.2s ease;
+          "
+        >
+            <button onclick="openCreateModal('L')" 
+                    style="background: none; border: none; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease; margin-right: 15px;" 
+                    onmouseover="this.style.backgroundColor='#e9ecef'" 
+                    onmouseout="this.style.backgroundColor='transparent'"
+                    title="Create Low Priority Task">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+            <span style="text-align: center;">Low Priority</span>
+            <span style="text-align: center;">({{ tasks_by_priority.low.count }})</span>
+            <span id="low-icon" style="font-size: 0.8rem; color: #666; text-align: center; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease;" 
+                  onclick="toggleCategory('low')" 
+                  onmouseover="this.style.backgroundColor='#e9ecef'" 
+                  onmouseout="this.style.backgroundColor='transparent'">▼</span>
+        </div>
+        <div id="low-content" style="padding: 0;">
+            {% for task in tasks_by_priority.low %}
+                <div class="task-item" style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; align-items: center; background: white; position: relative; cursor: pointer;" 
+                     onmouseover="this.style.backgroundColor='#f8f9fa'; showTooltip(this, '{{ task.description|escapejs }}')" 
+                     onmouseout="this.style.backgroundColor='white'; hideTooltip()"
+                     onclick="toggleButtons(this, '{{ task.pk }}')">
+                    <div style="text-align: center;">
+                        <strong style="display: block; margin-bottom: 5px; color: #333;">{{ task.title }}</strong>
+                        <span style="font-size: 0.9rem; color: #666;">
+                            Due: {{ task.due_date|date:"M j, Y g:i A" }}
+                            {% if task.is_overdue %}
+                                <span style="color: #dc3545; margin-left: 8px; cursor: pointer;" 
+                                      title="Overdue"
+                                      onmouseover="showTooltip(this, 'Overdue')" 
+                                      onmouseout="hideTooltip()">
+                                    &#9888;
+                                </span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div id="buttons-{{ task.pk }}" style="display: none; margin-top: 10px;">
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                            <button onclick="openEditModal(this); event.stopPropagation();" 
+                                    style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                    onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                    onmouseout="this.style.backgroundColor='transparent'"
+                                    data-task-id="{{ task.pk }}"
+                                    data-title="{{ task.title|escapejs }}"
+                                    data-description="{{ task.description|escapejs }}"
+                                    data-due-date="{{ task.due_date|date:'Y-m-d\TH:i' }}"
+                                    data-priority="{{ task.priority }}"
+                                    title="Edit">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </button>
+                            <form action="{% url 'task_complete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Complete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="20,6 9,17 4,12"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            <form action="{% url 'task_delete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Delete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="3,6 5,6 21,6"/>
+                                        <path d="m19,6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div style="padding: 20px; text-align: center; color: #666; font-style: italic;">No low priority tasks</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Completed Tasks -->
+    <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background: #f8f9fa; padding: 15px 20px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; align-items: center; font-weight: 600;">
+            <span></span> <!-- Empty cell for alignment -->
+            <span style="font-size: 1.1rem; color: #333; text-align: center;">Completed</span>
+            <span style="color: #666; font-size: 0.9rem; text-align: center;">({{ tasks_by_priority.completed.count }})</span>
+            <span id="completed-icon" style="font-size: 0.8rem; color: #666; text-align: center; cursor: pointer; padding: 8px; border-radius: 4px; transition: background-color 0.2s ease;" 
+                  onclick="toggleCategory('completed')" 
+                  onmouseover="this.style.backgroundColor='#e9ecef'" 
+                  onmouseout="this.style.backgroundColor='transparent'">▼</span>
+        </div>
+        <div id="completed-content" style="padding: 0;">
+            {% for task in tasks_by_priority.completed %}
+                <div class="task-item" style="padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; align-items: center; background: white; opacity: 0.6; position: relative; cursor: pointer;" 
+                     onmouseover="this.style.backgroundColor='#f8f9fa'; showTooltip(this, '{{ task.description|escapejs }}')" 
+                     onmouseout="this.style.backgroundColor='white'; hideTooltip()"
+                     onclick="toggleButtons(this, '{{ task.pk }}')">
+                    <div style="text-align: center;">
+                        <strong style="display: block; margin-bottom: 5px; color: #333; text-decoration: line-through;">{{ task.title }}</strong>
+                        <span style="font-size: 0.9rem; color: #666;">Completed: {{ task.due_date|date:"M j, Y g:i A" }}</span>
+                    </div>
+                    <div id="buttons-{{ task.pk }}" style="display: none; margin-top: 10px;">
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                            <form action="{% url 'task_delete' task.pk %}" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                        style="background: none; border: none; cursor: pointer; padding: 0; border-radius: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;" 
+                                        onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                                        onmouseout="this.style.backgroundColor='transparent'"
+                                        onclick="event.stopPropagation();"
+                                        title="Delete">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2">
+                                        <polyline points="3,6 5,6 21,6"/>
+                                        <path d="m19,6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div style="padding: 20px; text-align: center; color: #666; font-style: italic;">No completed tasks</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@media (max-width: 600px) {
+    .modal {
+        padding: 0 !important;
+    }
+    #createModalContent,
+    #editModalContent {
+        max-width: 80vw !important;
+        width: 80vw !important;
+        min-width: 0 !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        margin: 0 !important;
+        border-top-right-radius: 12px !important;
+        border-bottom-right-radius: 12px !important;
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        padding: 16px 16px 16px 16px !important;
+        box-shadow: none !important;
+        overflow-y: auto !important;
+        position: relative !important;
+    }
+    [style*="display: grid; grid-template-columns: auto 1fr 1fr 1fr;"],
+    [style*="display: grid; grid-template-columns: 1fr 1fr 1fr;"] {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 12px 8px !important;
+        justify-content: flex-start !important;
+    }
+    .task-action-row {
+        gap: 4px !important;
+    }
+    .task-action-row button {
+        padding: 4px !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        gap: 6px !important;
+    }
+    .task-action-row {
+        max-width: 220px !important;
+        gap: 2px !important;
+    }
+    .task-action-row button {
+        width: 44px !important;
+        height: 44px !important;
+        padding: 0 !important;
+    }
+    .task-action-row svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Your existing modal functions here
+    function openModal(type) {
+        document.getElementById(type + 'Modal').style.display = 'block';
+        document.body.classList.add('modal-open');
+    }
+
+    function closeModal(type) {
+        document.getElementById(type + 'Modal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+    }
+
+    function openEditModal(button) {
+        const taskId = button.getAttribute('data-task-id');
+        const title = button.getAttribute('data-title');
+        const description = button.getAttribute('data-description');
+        const dueDate = button.getAttribute('data-due-date');
+        const priority = button.getAttribute('data-priority');
+
+        document.getElementById('edit_title').value = title;
+        document.getElementById('edit_description').value = description;
+        document.getElementById('edit_due_date').value = dueDate;
+        document.getElementById('edit_priority').value = priority;
+
+        document.getElementById('editForm').action = '/tasks/' + taskId + '/edit/';
+
+        openModal('edit');
+    }
+
+    function openCreateModal(priority) {
+        const priorityText = {
+            'H': 'High Priority',
+            'M': 'Medium Priority', 
+            'L': 'Low Priority'
+        };
+        
+        document.getElementById('create_priority').value = priority;
+        document.getElementById('priority-subtitle').textContent = priorityText[priority];
+        openModal('create');
+    }
+
+    // Collapsible categories
+    function toggleCategory(category) {
+        const content = document.getElementById(category + '-content');
+        const icon = document.getElementById(category + '-icon');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '▶';
+        }
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (modal.style.display === 'block') {
+                    modal.style.display = 'none';
+                    document.body.classList.remove('modal-open');
+                }
+            });
+        }
+    });
+
+    // Prevent zoom on input focus (iOS)
+    document.addEventListener('touchstart', function() {}, {passive: true});
+
+    // Tooltip functionality
+    function showTooltip(element, text) {
+        if (!text || text.trim() === '') return;
+        
+        // Remove existing tooltip
+        hideTooltip();
+        
+        const tooltip = document.createElement('div');
+        tooltip.id = 'tooltip';
+        tooltip.style.cssText = `
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            max-width: 250px;
+            word-wrap: break-word;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            pointer-events: none;
+        `;
+        tooltip.textContent = text;
+        
+        document.body.appendChild(tooltip);
+        
+        // Position tooltip
+        const rect = element.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+        
+        let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+        let top = rect.top - tooltipRect.height - 10;
+        
+        // Adjust if tooltip goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipRect.width - 10;
+        }
+        if (top < 10) {
+            top = rect.bottom + 10;
+        }
+        
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+    }
+
+    function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip) {
+            tooltip.remove();
+        }
+    }
+
+    // Hide tooltip when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('[onclick*="showTooltip"]')) {
+            hideTooltip();
+        }
+    });
+
+    // Toggle buttons visibility
+    function toggleButtons(element, taskId) {
+        const buttonsDiv = document.getElementById('buttons-' + taskId);
+        const allButtonDivs = document.querySelectorAll('[id^="buttons-"]');
+        
+        // Hide all other button divs first
+        allButtonDivs.forEach(div => {
+            if (div.id !== 'buttons-' + taskId) {
+                div.style.display = 'none';
+            }
+        });
+        
+        // Toggle the clicked task's buttons
+        if (buttonsDiv.style.display === 'none' || buttonsDiv.style.display === '') {
+            buttonsDiv.style.display = 'block';
+        } else {
+            buttonsDiv.style.display = 'none';
+        }
+    }
+
+    // Hide buttons when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('[onclick*="toggleButtons"]') && !event.target.closest('[id^="buttons-"]')) {
+            const allButtonDivs = document.querySelectorAll('[id^="buttons-"]');
+            allButtonDivs.forEach(div => {
+                div.style.display = 'none';
+            });
+        }
+    });
+</script>
+{% endblock %}
